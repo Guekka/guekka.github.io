@@ -14,11 +14,11 @@ But no solution felt perfect. Until I decided to have a try at hosting using Nix
 
 I'm going to assume you know about NixOS and have some prior experience. However, for a small summary: NixOS is a Linux distribution revolving around the Nix package manager. Its main advantage is having a reproducible environment through a declarative configuration. This means that you can copy an entire computer configuration easily: if it works somewhere, it will work anywhere.
 
-I had been using NixOS as a desktop distribution, so it was time to use it as a server too. My main focus point is reproducibility, so that's why we'll start with configuring *impermanence*.
+My main focus point is reproducibility, so that's why we'll start with configuring *impermanence*.
 
 ## What's impermanence?
 
-Originally, a philosophic concept. But in our case, impermanence means erasing the `/` drive at each reboot. You heard that right, erasing *almost* everything at each reboot. I'm not going to explain this part in much detail, as others have done it before me:
+Originally, a philosophic concept. But in our case, impermanence means erasing the `/` drive at each reboot. You read that right, erasing *almost* everything at each reboot. This part stands on the shoulders of those who did it before me:
 - [Erase your darlings: immutable infrastructure for mutable systems - Graham Christensen](https://grahamc.com/blog/erase-your-darlings)
 - [NixOS ❄: tmpfs as root](https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/)
 - [Encypted Btrfs Root with Opt-in State on NixOS](https://mt-caret.github.io/blog/posts/2020-06-29-optin-state.html#fn6)
@@ -105,14 +105,16 @@ My final configuration is available [here](https://github.com/Guekka/nixos-serve
 ## Configuring the system
 
 - Checking that we have the correct mount options in `/mnt/etc/nixos/hardware-configuration.nix`.
-I added `"compress=zstd" "noatime"` to all filesystems. We also need to add `neededForBoot` to `/var/log` and `/persist`.
 
-- replace default values in `configuration.nix`
+I've added `"compress=zstd" "noatime"` to all filesystems. We also need to add `neededForBoot` to `/var/log` and `/persist`.
+
+- Replacing default values in `configuration.nix`
+
 I've enabled `networkmanager`, removed most suggested options and enabled `system.copySystemConfiguration`.
 
 This last option copies the current configuration to `/run/current_system/configuration.nix`. You should not rely on it: keep your configuration in a git repository. But it can serve as some kind of last chance.
 
-- declaring a user, including ssh
+- Declaring a user, including ssh
 ```nix
 users.mutableUsers = false;
 users.users.user = {
@@ -200,7 +202,7 @@ We're going to use the following script, credit of mt-caret. Do not forget to re
 ```
 We can then specify the files we want to keep.
 
-So, which files do we want to keep? Let's find out. Thanks to another useful script of mt-caret, we can list the differences between our current `/` and the blank state:
+But which files do we want to keep? Let's find out. Thanks to another useful script of mt-caret, we can list the differences between our current `/` and the blank state:
 ```sh
 #!/usr/bin/env bash
 # fs-diff.sh
