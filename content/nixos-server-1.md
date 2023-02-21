@@ -77,7 +77,7 @@ And now, the crucial part:
 btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
 ```
 We just took a snapshot of that empty volume. We will restore it at each reboot.
-We can now mount the subvolumes and let `nix-generate-config` do its job
+We can now mount the subvolumes and let `nixos-generate-config` do its job
 ```sh
 mount -o subvol=root,compress=zstd,noatime "$DISK"3 /mnt
 
@@ -230,7 +230,7 @@ Used like this:
 sudo mkdir /mnt ; sudo mount -o subvol=/ /dev/vda3 /mnt ; ./fs-diff.sh
 ```
 Here's the result of mine:
-```raw
+```
 /etc/.clean
 /etc/group
 /etc/machine-id
@@ -268,7 +268,7 @@ That's not too bad!
 
 Out of these, there's almost nothing I want to preserve.
 
-Let's make use of the `impermanence` module. We need to download the module:
+Let's make use of the `impermanence` module. We need to download it:
 ```nix
 let
   impermanence = builtins.fetchTarball "https://github.com/nix-community/impermanence/archive/master.tar.gz";
@@ -323,7 +323,7 @@ sudo cp {,/persist}/etc/ssh/ssh_host_rsa_key
 sudo cp {,/persist}/etc/ssh/ssh_host_rsa_key.pub
 ```
 Now, if we reboot and list files again:
-```raw
+```
 /etc/.clean
 /etc/group
 /etc/passwd
@@ -354,9 +354,11 @@ Success! The files we persisted are no longer showing up.
 
 It is possible to setup the impermanence module for our home directory. However, I did not want to go through `home-manager` installation. Furthermore, a home directory is meant to be stateful.
 
-In our case, we are creating a server, so it would still make sense to configure it. If you are interested, I will direct you to [tmpfs at home](https://elis.nu/blog/2020/06/nixos-tmpfs-as-home/)
+In our case, we are creating a server, so it would still make sense to configure it. If you are interested, have a look at [tmpfs at home](https://elis.nu/blog/2020/06/nixos-tmpfs-as-home/).
 
-## Conclusion
+## Next steps
 
-Todo
+In the next part, we will make our server more secure by making it only available through Tailscale. We will also setup our first service.
 
+***
+I hope you've enjoyed this article! Thanks for reading to the end!
