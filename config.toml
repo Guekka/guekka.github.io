@@ -112,7 +112,7 @@ stylesheets = [ "abridge-switcher.css" ] # Orange Automatic Dark/Light Theme bas
 #stylesheets = [ "abridge-switcher.css", "iconfont.css" ] # include your own font icons!
 #stylesheets = [ "abridge-switcher.css", "font.css", "iconfont.css" ] # include your own font, and font icons!
 
-banner = "banner.png" # Used as default image for OpenGraph/Twitter if page specific image is undefined.
+#banner = "banner.png" # Used as default image for OpenGraph/Twitter if page specific image is undefined.
 # favicons, comment out a line to disable loading some or all of these.
 favicon_theme_color = "#333333"
 favicon_ms_color = "#333333"
