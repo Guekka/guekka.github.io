@@ -100,7 +100,7 @@ nixos-generate-config --root /mnt
 ```
 Lastly, we only have to edit the generated configuration files at `/mnt/etc/nixos`.
 
-My final configuration is available [here](https://github.com/Guekka/nixos-server/tree/1-impermanence). You can follow all the steps by looking at the [commits](https://github.com/Guekka/nixos-server/commits/1-impermanence-tailscale).
+My final configuration is available [here](https://github.com/Guekka/nixos-server/tree/1-impermanence). You can follow all the steps by looking at the [commits](https://github.com/Guekka/nixos-server/commits/1-impermanence).
 
 ## Configuring the system
 
