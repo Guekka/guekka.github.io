@@ -31,7 +31,7 @@ Well, yes, we do. Apart from the obvious `nixpkgs` dependency, which is configur
 ```nix
   impermanence = builtins.fetchTarball "https://github.com/Nix-community/impermanence/archive/master.tar.gz";
 ```
-This `fetchTarball` call is bad by the way, as we do not specify the expected hash. We could be a victim of a man-in-the-middle attack and not notice it.
+This `fetchTarball` call is bad, by the way, as we do not specify the expected hash. We could be a victim of a man-in-the-middle attack and not notice it.
 
 Now that I intend to add more modules, and possibly use the `unstable` channel, it is better to migrate. Let's see what our entry point would look like:
 ```nix
@@ -83,7 +83,7 @@ That's pretty much it. With that `flake.Nix` in `/etc/nixos`, `nixos-rebuild` wi
 
 # Secrets with Sops
 
-In order to setup Tailscale, we will use a pre-auth key. This will allow us to connect to our server without interaction. However, we must hide this key, or other people could join our Tailscale network, which could obviously have dangerous consequences.
+In order to set up Tailscale, we will use a pre-auth key. This allows us to connect to our server without interaction. However, we must hide this key, or other people could join our Tailscale network, which could obviously have dangerous consequences.
 
 There are 2 well-known solutions : agenix and sops-nix. I've chosen sops for no particular reason.
 The first step will be to add it to our flake. See, we already get a use for it!
@@ -205,7 +205,7 @@ nix-shell -p sops --run "sops hosts/horus/secrets.yaml"
 ```
 An editor should open. We can now write secrets, using yaml. Once we're done, we can save the file. Example content:
 ```yaml
-tailscale_key: aaaaaaaaa
+tailscale_key: e2b6595884993e001da58d2995af65df489582a702e3a2f3
 ```
 We now have to tell `sops` this secret exists. So we declare it somewhere in our configuration:
 ```
