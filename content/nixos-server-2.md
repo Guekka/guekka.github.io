@@ -1,6 +1,6 @@
 +++
 title = "NixOS as a server, part 2: Flake, tailscale"
-render = false
+date = 2023-05-17
 
 [taxonomies]
 categories = ["Projects"]
