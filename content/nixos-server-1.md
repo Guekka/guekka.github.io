@@ -158,48 +158,71 @@ This will be enough for now. Let's install the system before going to the next s
 ## Configuring impermanence
 
 We've created our volumes, we've configured the system... But I promised we would reset our system at each reboot. Let's do that now!
-We're going to use the following script, credit of mt-caret. Do not forget to replace `/dev/vda3` with your data partition.
+We're going to use the following script, credit of mt-caret. Do not forget to replace `vda3` with your data partition.
+
+**16/07/23 update**: it was brought to my attention that [postDeviceCommands can cause data loss](https://discourse.nixos.org/t/what-does-impermanence-add-over-built-in-functionality/27939/16).
+While I did not experience any issue, I have updated the script to use a safer alternative.
 ```nix
-  # Note `lib.mkBefore` is used instead of `lib.mkAfter` here.
-  boot.initrd.postDeviceCommands = pkgs.lib.mkBefore ''
-    mkdir -p /mnt
+  boot.initrd = {
+    enable = true;
+    supportedFilesystems = [ "btrfs" ];
 
-    # We first mount the btrfs root to /mnt
-    # so we can manipulate btrfs subvolumes.
-    mount -o subvol=/ /dev/vda3 /mnt
+    systemd.services.restore-root = {
+      description = "Rollback btrfs rootfs";
+      wantedBy = [ "initrd.target" ];
+      requires = [
+        "dev-vda3"
+      ];
+      after = [
+        "dev-vda3"
+        # for luks
+        "systemd-cryptsetup@${config.networking.hostName}.service"
+      ];
+      before = [ "sysroot.mount" ];
+      unitConfig.DefaultDependencies = "no";
+      serviceConfig.Type = "oneshot";
+      script = ''
+        mkdir -p /mnt
 
-    # While we're tempted to just delete /root and create
-    # a new snapshot from /root-blank, /root is already
-    # populated at this point with a number of subvolumes,
-    # which makes `btrfs subvolume delete` fail.
-    # So, we remove them first.
-    #
-    # /root contains subvolumes:
-    # - /root/var/lib/portables
-    # - /root/var/lib/machines
-    #
-    # I suspect these are related to systemd-nspawn, but
-    # since I don't use it I'm not 100% sure.
-    # Anyhow, deleting these subvolumes hasn't resulted
-    # in any issues so far, except for fairly
-    # benign-looking errors from systemd-tmpfiles.
-    btrfs subvolume list -o /mnt/root |
-    cut -f9 -d' ' |
-    while read subvolume; do
-      echo "deleting /$subvolume subvolume..."
-      btrfs subvolume delete "/mnt/$subvolume"
-    done &&
-    echo "deleting /root subvolume..." &&
-    btrfs subvolume delete /mnt/root
+        # We first mount the btrfs root to /mnt
+        # so we can manipulate btrfs subvolumes.
+        mount -o subvol=/ /dev/vda3 /mnt
 
-    echo "restoring blank /root subvolume..."
-    btrfs subvolume snapshot /mnt/root-blank /mnt/root
+        # While we're tempted to just delete /root and create
+        # a new snapshot from /root-blank, /root is already
+        # populated at this point with a number of subvolumes,
+        # which makes `btrfs subvolume delete` fail.
+        # So, we remove them first.
+        #
+        # /root contains subvolumes:
+        # - /root/var/lib/portables
+        # - /root/var/lib/machines
+        #
+        # I suspect these are related to systemd-nspawn, but
+        # since I don't use it I'm not 100% sure.
+        # Anyhow, deleting these subvolumes hasn't resulted
+        # in any issues so far, except for fairly
+        # benign-looking errors from systemd-tmpfiles.
+        btrfs subvolume list -o /mnt/root |
+        cut -f9 -d' ' |
+        while read subvolume; do
+          echo "deleting /$subvolume subvolume..."
+          btrfs subvolume delete "/mnt/$subvolume"
+        done &&
+        echo "deleting /root subvolume..." &&
+        btrfs subvolume delete /mnt/root
 
-    # Once we're done rolling back to a blank snapshot,
-    # we can unmount /mnt and continue on the boot process.
-    umount /mnt
-  '';
+        echo "restoring blank /root subvolume..."
+        btrfs subvolume snapshot /mnt/root-blank /mnt/root
+
+        # Once we're done rolling back to a blank snapshot,
+        # we can unmount /mnt and continue on the boot process.
+        umount /mnt
+      '';
+    };
+  };
 ```
+
 We can then specify the files we want to keep.
 
 But which files do we want to keep? Let's find out. Thanks to another useful script of mt-caret, we can list the differences between our current `/` and the blank state:
