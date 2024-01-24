@@ -1,4 +1,5 @@
 +++
 title = "posts"
-template = "posts.html"
+paginate_by = 10
+template = "index.html"
 +++
