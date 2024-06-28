@@ -1,0 +1,29 @@
+{%- extends "page.html" %}
+{% block comments_init %}
+<script defer data-domain="guekka.github.io" src="https://plausible.bizel.fr/js/script.js"></script>
+{% endblock comments_init %}
+
+{% block comments_body %}
+
+<noscript>Please enable JavaScript for accessing the comments</noscript>
+
+<script src="https://giscus.app/client.js" data-repo="guekka/guekka.github.io" data-repo-id="R_kgDOI_vZbw"
+    data-category="General" data-category-id="DIC_kwDOI_vZb84CUeNw" data-mapping="og:title" data-strict="0"
+    data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="preferred_color_scheme"
+    data-lang="en" data-loading="lazy" crossorigin="anonymous" async>
+    </script>
+
+<script>
+    function update() {
+        const islight = document.documentElement.classList.contains("light");
+        const theme = islight ? 'light' : 'dark_dimmed';
+
+        const message = { setConfig: { theme: theme } };
+        const iframe = document.querySelector('.giscus-frame');
+        iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+    }
+    document.getElementById('mode').addEventListener('click', () => setTimeout(update, 100)); // hack since callback order is undefined
+    window.addEventListener('load', update);
+</script>
+
+{% endblock comments_body %}
