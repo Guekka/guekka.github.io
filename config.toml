@@ -10,9 +10,9 @@ theme = "abridge"
 
 default_language = "en"
 compile_sass = true
-minify_html = true
+minify_html = false
 build_search_index = true
-generate_feed = true
+generate_feeds = true
 taxonomies = [
     {name = "categories", feed = true},
     {name = "tags", feed = true},
@@ -49,12 +49,15 @@ smart_punctuation = true          # `...` to `…`, `"quote"` to `“curly”` e
 ###############################################################################
 
 menu = [
+#    {url = "blog", name = "Blog", slash = true, blank = false, size="s110"},
     {url = "about", name = "About", slash = true, blank = false, size="s110"},
     {url = "archive", name = "Posts", slash = true, blank = false, size="s110"},
+#    {url = "categories", name = "Categories", slash = true, blank = false, size="s110"},
     {url = "tags", name = "Tags", slash = true, blank = false, size="s110"},
 ]
 menu_footer = [
     {url = "about", name = "About", slash = true, blank = false},
+#    {url = "contact", name = "Contact", slash = true, blank = false},
     {url = "privacy", name = "Privacy", slash = true, blank = false},
     {url = "sitemap.xml", name = "Sitemap", slash = false, blank = true},
 ]
