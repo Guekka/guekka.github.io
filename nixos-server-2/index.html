@@ -1,0 +1,532 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://guekka.github.io/js/theme.min.js" integrity="sha384-pb++s6uBRKaQv+iAXpgA/H3IlpLZdO14tTwuCI7uXmz4aaZdByoCcM+6BhynMq/1"></script>
+  <link rel="stylesheet" href="https://guekka.github.io/abridge.css?h=63bf1f533d098410e269" />
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="base" content="https://guekka.github.io" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#333333" />
+  <meta name="msapplication-TileColor" content="#333333" />
+  <link rel="manifest" href="https://guekka.github.io/manifest.min.json" />
+  <link rel="mask-icon" href="https://guekka.github.io/safari-pinned-tab.svg" color="#ff9900" />
+  <link rel="icon" type="image/svg+xml" href="https://guekka.github.io/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://guekka.github.io/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://guekka.github.io/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://guekka.github.io/favicon-16x16.png" />
+  <link rel="preload" as="style" class="preStyle" href="https://fonts.cdnfonts.com/css/ia-writer-quattro-s?styles=103875,103873" crossorigin="anonymous" />
+  <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <title>NixOS as a server, part 2: Flake, tailscale | Guekka's blog</title>
+  <meta name="author" content="Guekka" />
+  <meta name="copyright" content="Guekka&#x27;s blog" />
+  <meta name="description" content="C++, Nix, Linux, Self-hosting, and more." />
+  <link rel="canonical" href="https://guekka.github.io/nixos-server-2/" />
+  <meta name="keywords" content="c++,self-hosting,nix,rust,linux,privacy" />
+  <meta property="og:url" content="https://guekka.github.io/nixos-server-2/" />
+  <meta name="twitter:url" content="https://guekka.github.io/nixos-server-2/" />
+  <meta property="og:description" content="C++, Nix, Linux, Self-hosting, and more." />
+  <meta name="twitter:description" content="C++, Nix, Linux, Self-hosting, and more." />
+  <meta property="og:title" content="NixOS as a server, part 2: Flake, tailscale | Guekka&#x27;s blog" />
+  <meta name="twitter:title" content="NixOS as a server, part 2: Flake, tailscale | Guekka&#x27;s blog" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:site_name" content="Guekka&#x27;s blog" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:type" content="website" />
+  <meta property="og:updated_time" content="2023-05-17" />
+<script defer data-domain="guekka.github.io" src="https://plausible.bizel.fr/js/script.js"></script>
+
+  <script defer src="https://guekka.github.io/js/abridge.min.js?h=4dbe2f6c7673e0a145f0" integrity="sha384-en9uTP2jQMLjO9fwbuGUKlCZ+kGMvN97ASddcA7mljWRGw70rs3zSMPNIozwGYFU"></script>
+  <noscript><link rel="stylesheet" href="https://guekka.github.io/nojs.css" /></noscript>
+</head>
+<body>
+  <header>
+    <nav>
+      <div><h1><a href="https://guekka.github.io" title="Guekka&#x27;s blog">Guekka's blog</a></h1></div>
+      <div>
+
+        <div>
+          <ul><li><a class="s110" href="https://guekka.github.io/about/"> About </a></li><li><a class="s110" href="https://guekka.github.io/archive/"> Posts </a></li><li><a class="s110" href="https://guekka.github.io/tags/"> Tags </a></li><li><i type="reset" id="mode" class="js svgs adjust"></i></ul>
+        </div>
+
+        <div>
+          <div>
+            <form autocomplete=off class="js" name="goSearch" id="searchbox">
+              <div class="searchd">
+                <input id="searchinput" type="text" placeholder="Search" title="Search" />
+                <button type="submit" title="Search" class="svgs search"></button>
+              </div>
+              <div class="results"><div id="suggestions"></div></div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </nav>
+  </header>
+  <main>
+    <article>
+      <h1><a href="https://guekka.github.io/nixos-server-2/">NixOS as a server, part 2: Flake, tailscale</a></h1>
+
+      <span class="s95"> Guekka <span class="rpad"></span> May 17, 2023 <span class="rpad"></span> [<a href="https://guekka.github.io/categories/projects/">Projects</a>] #<a href="https://guekka.github.io/tags/nix/">nix</a>  #<a href="https://guekka.github.io/tags/self-hosting/">self-hosting</a> </span>
+
+    
+
+
+<p>In the <a rel="noopener" target="_blank" href="https://guekka.github.io/nixos-server-1/">previous part</a>, we configured our NixOS server to use impermanence. I have made a few changes since, most notably moving to a proper VM in Proxmox.</p>
+<p>The following instructions might lack some details, but you can follow <a rel="noopener" target="_blank" href="https://github.com/Guekka/nixos-server/commits/2-tailscale">the GitHub repo</a> to see the full code.</p>
+<h1 id="moving-to-flakes">Moving to flakes</h1>
+<blockquote>
+<p>If you already know about flakes, you can safely ignore this part.</p>
+</blockquote>
+<p>Have you heard about Nix flakes? If you have been in the Nix ecosystem for more than a few days, most likely. They’re the shiny new way to write Nix code, still experimental but used everywhere.
+Their main advantage over traditional Nix is <em>purity</em>, mainly with their defined <code>inputs</code> and <code>outputs</code>. </p>
+<p>Remember when I told you Nix was reproducible? It was a lie. Let me explain myself: when writing Nix code, we always have some kind of input. For example, <code>nixpkgs</code> will be required almost all the time. There are two ways to obtain it.</p>
+<ul>
+<li>fetch it: <code>import builtins.fetchTarball &quot;https://github.com/nixos/nixpkgs/archive/nixos-22.11.tar.gz&quot;;</code></li>
+<li>or more commonly, use <em>channels</em>: <code>import &lt;nixpkgs&gt; {}</code></li>
+</ul>
+<p>This second way uses a globally-defined configuration, which can change externally to our Nix files. We thus lose complete reproducibility. Instead, flakes allow us to avoid channels by specifying inputs alongside Nix configuration, as well as blocking some actions that could hinder reproducibility.</p>
+<p>For a more in depth introduction, have a look at <a rel="noopener" target="_blank" href="https://nixos.wiki/wiki/Flakes#See_also">the wiki</a>.</p>
+<p>Now, why do we want to migrate to flakes? We do not have external requirements, do we?
+Well, yes, we do. Apart from the obvious <code>nixpkgs</code> dependency, which is configured system-wide, the impermanence module is being imported:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">impermanence</span> <span class="z-invalid z-illegal">=</span> <span class="z-constant z-language z-nix">builtins</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">fetchTarball</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>https://github.com/Nix-community/impermanence/archive/master.tar.gz<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>This <code>fetchTarball</code> call is bad, by the way, as we do not specify the expected hash. We could be a victim of a man-in-the-middle attack and not notice it.</p>
+<p>Now that I intend to add more modules, and possibly use the <code>unstable</code> channel, it is better to migrate. Let’s see what our entry point would look like:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">  <span class="z-comment z-line z-number-sign z-nix"># what is consumed (previously provided by channels and fetchTarball)</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">inputs</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">nixpkgs</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">url</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>github:NixOS/nixpkgs/nixos-22.11<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span> <span class="z-comment z-line z-number-sign z-nix"># (1)</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">impermanence</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">url</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>github:Nix-community/impermanence<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">  <span class="z-comment z-line z-number-sign z-nix"># what will be produced (i.e. the build)</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">outputs</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-entity z-function z-2 z-nix">{</span> <span class="z-variable z-parameter z-function z-1 z-nix">nixpkgs</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-keyword z-operator z-nix">... </span><span class="z-punctuation z-definition z-entity z-function z-nix">}</span>@<span class="z-variable z-parameter z-function z-3 z-nix">inputs</span><span class="z-punctuation z-definition z-function z-nix">:</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span> <span class="z-comment z-line z-number-sign z-nix"># (2)</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">nixosConfigurations</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span> <span class="z-comment z-line z-number-sign z-nix"># (3)</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">server</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">nixpkgs</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">nixosSystem</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span> <span class="z-comment z-line z-number-sign z-nix"># (4)</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">packages</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">nixpkgs</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">legacyPackages</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">x86_64-linux</span><span class="z-punctuation z-terminator z-bind z-nix">;</span> <span class="z-comment z-line z-number-sign z-nix"># (5)</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">specialArgs</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">inputs</span><span class="z-punctuation z-terminator z-bind z-nix">;</span> <span class="z-comment z-line z-number-sign z-nix"># forward inputs to modules</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">modules</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">          <span class="z-string z-unquoted z-path z-nix">./configuration.Nix</span>
+</span><span class="z-source z-nix">        <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span></code></pre>
+<p>That’s a lot to understand at once. Let’s study it one line at a time.
+Firstly, we have to understand this file is simply describing <code>outputs</code> as a function taking <code>inputs</code>. Like in mathematics, we create the same output given the same input: a <em>pure</em> function, would say functional programmers.</p>
+<p><code>(1)</code> is defining an input: we simply give it an url. That line can be translated as *Grab the <code>nixos-22.11</code> branch from the GitHub repo <code>nixpkgs</code> owned by <code>NixOS</code>.</p>
+<p><code>(2)</code> is defining the <code>outputs</code> function. Most complicated things are defined using functions in Nix. It takes a <em>named attribute set</em> argument as an input. So this syntax:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-punctuation z-definition z-entity z-function z-2 z-nix">{</span> <span class="z-variable z-parameter z-function z-1 z-nix">nixpkgs</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-keyword z-operator z-nix">... </span><span class="z-punctuation z-definition z-entity z-function z-nix">}</span>@<span class="z-variable z-parameter z-function z-3 z-nix">inputs</span><span class="z-punctuation z-definition z-function z-nix">:</span> <span class="z-variable z-parameter z-name z-nix">nixpkgs</span>
+</span></code></pre>
+<p>is the same as:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-variable z-parameter z-function z-4 z-nix">inputs</span><span class="z-punctuation z-definition z-function z-nix">:</span> <span class="z-variable z-parameter z-name z-nix">inputs</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">nixpkgs</span>
+</span></code></pre>
+<p>In both cases, we’re accessing the <code>nixpkgs</code> property of the <code>inputs</code> set.</p>
+<p>But in the first case, we don’t have to repeat <code>inputs.</code> everywhere. In JS, you would call that <em>destructuring</em>: it is just making inner elements easier to access. If you have troubles understanding the Nix syntax, I personally like <a rel="noopener" target="_blank" href="https://fasterthanli.me/series/building-a-rust-service-with-Nix/part-9">FasterThanLime article</a>.</p>
+<p><code>(3)</code>: NixOS configuration have to be placed specifically in the <code>nixosConfigurations</code> set.</p>
+<p><code>(4)</code> is the place where we actually define the system. We call the <code>nixosSystem</code> function and pass it some arguments. Yes, the whole system is an <code>output</code> too!</p>
+<p><code>(5)</code>: we give the packages instance to our system. In our case, we are passing the default packages, but we might want to modify them before. We also have to specify our architecture (<code>x86_64</code>).</p>
+<p>That’s pretty much it. With that <code>flake.Nix</code> in <code>/etc/nixos</code>, <code>nixos-rebuild</code> will work as before. However, if you’re using git, beware that your files all need to be under version control or Nix will not see them.</p>
+<h1 id="secrets-with-sops">Secrets with Sops</h1>
+<p>In order to set up Tailscale, we will use a pre-auth key. This allows us to connect to our server without interaction. However, we must hide this key, or other people could join our Tailscale network, which could obviously have dangerous consequences.</p>
+<p>There are 2 well-known solutions : agenix and sops-nix. I’ve chosen sops for no particular reason.
+The first step will be to add it to our flake. See, we already get a use for it!</p>
+<h2 id="importing-sops-nix">Importing <code>sops-nix</code></h2>
+<p>Let’s change our <code>inputs</code>:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">inputs</span> <span class="z-invalid z-illegal">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-comment z-line z-number-sign z-nix"># ...</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">sops-nix</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">url</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>github:mic92/sops-nix<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">inputs</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">nixpkgs</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">follows</span> <span class="z-keyword z-operator z-bind z-nix">=</span><span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>nixpkgs<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<h3 id="follows"><code>Follows</code></h3>
+<p>What’s up with this <code>follows</code>? <code>sops-nix</code> already depends on <code>nixpkgs</code>, but it might use a different revision than ours. Making it use our own has several advantages:</p>
+<ul>
+<li>improve consistency</li>
+<li>reduce the number of evaluations required</li>
+</ul>
+<p>And how do we know if a package has inputs that need to be redirected? That’s the neat thing, we don’t. Either we have to look at the upstream <code>flake.nix</code>, or we can call <code>nix flake info</code> and get a graph like so:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Resolved URL:  git+file:///etc/nixos
+</span><span class="z-text z-plain">Locked URL:    git+file:///etc/nixos
+</span><span class="z-text z-plain">Path:          /Nix/store/4b14z6ki7av3kid69sp5vgf50wzd3a73-source
+</span><span class="z-text z-plain">Last modified: 2023-04-17 14:04:13
+</span><span class="z-text z-plain">Inputs:
+</span><span class="z-text z-plain">├───impermanence: github:Nix-community/impermanence/6138e
+</span><span class="z-text z-plain">├───nixpkgs: github:NixOS/nixpkgs/39fa0
+</span><span class="z-text z-plain">└───sops-Nix: github:mic92/sops-nix/de651
+</span><span class="z-text z-plain">    ├───nixpkgs follows input &#39;nixpkgs&#39;
+</span><span class="z-text z-plain">    └───nixpkgs-stable: github:NixOS/nixpkgs/1040c
+</span></code></pre>
+<p>We can notice <code>sops-nix</code> also has a <code>nixpkgs-stable</code> input, that we might as well redirect.</p>
+<h2 id="generating-a-key">Generating a key</h2>
+<p><code>sops-nix</code> works by encrypting our secrets with private keys.
+We thus need to provide it with the keys we will use. We can generate an <code>age</code> key, or get one from our <code>SSH</code> host key.
+Each secrets group can have different allowed keys, so that one user cannot access another’s secrets.
+I will use the SSH host key for my server:</p>
+<pre class="z-code"><code><span class="z-text z-plain">$ nix-shell -p ssh-to-age --run &#39;cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age&#39;
+</span><span class="z-text z-plain">age1dt24qetqhy2ng53fyj69yq9hg8rdsg4ep0lvvhdg69xw9v4l0asqj6xzkh
+</span></code></pre>
+<p>We now have to write <code>.sops.yaml</code> file in order to configure which keys can access which secrets.</p>
+<pre data-lang="yaml" class="language-yaml z-code"><code class="language-yaml" data-lang="yaml"><span class="z-source z-yaml"><span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">keys</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+</span><span class="z-source z-yaml">  <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-meta z-property z-yaml"><span class="z-keyword z-control z-property z-anchor z-yaml"><span class="z-punctuation z-definition z-anchor z-yaml">&amp;</span></span><span class="z-entity z-name z-other z-anchor z-yaml">horus</span></span> <span class="z-string z-unquoted z-plain z-out z-yaml">age1dt24qetqhy2ng53fyj69yq9hg8rdsg4ep0lvvhdg69xw9v4l0asqj6xzkh</span>
+</span><span class="z-source z-yaml"><span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">creation_rules</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+</span><span class="z-source z-yaml">  <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">path_regex</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-unquoted z-plain z-out z-yaml">hosts/horus/secrets.yaml$</span>
+</span><span class="z-source z-yaml">    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">key_groups</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+</span><span class="z-source z-yaml">    <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">age</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+</span><span class="z-source z-yaml">      <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-keyword z-control z-flow z-alias z-yaml"><span class="z-punctuation z-definition z-alias z-yaml">*</span></span><span class="z-variable z-other z-alias z-yaml">horus</span>
+</span><span class="z-source z-yaml">  <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">path_regex</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-unquoted z-plain z-out z-yaml">hosts/common/secrets.yaml$</span>
+</span><span class="z-source z-yaml">    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">key_groups</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+</span><span class="z-source z-yaml">    <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">age</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+</span><span class="z-source z-yaml">      <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-keyword z-control z-flow z-alias z-yaml"><span class="z-punctuation z-definition z-alias z-yaml">*</span></span><span class="z-variable z-other z-alias z-yaml">horus</span>
+</span></code></pre>
+<p>That’s it for decryption. However, we need to write secrets too. For that, we can get the corresponding private key:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">nix-shell</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>p</span> ssh-to-age<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>run</span> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>sudo ssh-to-age -private-key -i /etc/ssh/ssh_host_ed25519_key | install -D -m 400 /dev/stdin ~/.config/sops/age/keys.txt<span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span>
+</span></code></pre>
+<p>That <code>install</code> bit is here to create the directory if it doesn’t exist and set the right permissions.</p>
+<blockquote>
+<p>Isn’t this insecure? The key is not password-locked.</p>
+</blockquote>
+<p>Indeed, if someone has access to our user account, they can read that key and decrypt the secrets. However, we can probably assume our user already has access to the local secrets, so it doesn’t matter much. Our goal is to be able to put these secrets on a public GitHub, not to protect them locally.</p>
+<h2 id="configuring-sops-nix">Configuring <code>sops-nix</code></h2>
+<p>Our last step is to configure <code>sops</code>.
+We’re going to get fancy here, as I’m <del>stealing</del> borrowing a module from Misterio’s config. In the future, this will often happen, as his config happens to be a great resource. Let’s have a look at <code>sops.nix</code>:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-punctuation z-definition z-entity z-function z-2 z-nix">{</span> <span class="z-variable z-parameter z-function z-1 z-nix">sops-nix</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-variable z-parameter z-function z-1 z-nix">lib</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-variable z-parameter z-function z-1 z-nix">config</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-keyword z-operator z-nix">... </span><span class="z-punctuation z-definition z-entity z-function z-nix">}</span><span class="z-punctuation z-definition z-function z-nix">:</span>
+</span><span class="z-source z-nix"><span class="z-keyword z-other z-nix">let</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">isEd25519</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-function z-4 z-nix">k</span><span class="z-punctuation z-definition z-function z-nix">:</span> <span class="z-variable z-parameter z-name z-nix">k</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">type</span> <span class="z-keyword z-operator z-nix">==</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>ed25519<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">getKeyPath</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-function z-4 z-nix">k</span><span class="z-punctuation z-definition z-function z-nix">:</span> <span class="z-variable z-parameter z-name z-nix">k</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">path</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">keys</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">builtins</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">filter</span> <span class="z-variable z-parameter z-name z-nix">isEd25519</span> <span class="z-variable z-parameter z-name z-nix">config</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">services</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">openssh</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">hostKeys</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-keyword z-other z-nix">in</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">imports</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">    <span class="z-variable z-parameter z-name z-nix">sops-nix</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">nixosModules</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">sops</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">sops</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">age</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">sshKeyPaths</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-support z-function z-nix">map</span> <span class="z-variable z-parameter z-name z-nix">getKeyPath</span> <span class="z-variable z-parameter z-name z-nix">keys</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span></code></pre>
+<p>This looks complicated, but it is not. First, we are declaring some functions in the <code>let</code> block.</p>
+<ul>
+<li><code>isEd25519</code> simply tells if an SSH key uses <code>ed25519</code></li>
+<li><code>getKeyPath</code> gets the path of an SSH key</li>
+<li><code>keys</code> is the list of <code>ed25519</code> keys, taken from <code>openssh</code></li>
+</ul>
+<p>Then we import <code>sops</code>. Finally, we give it the keys we collected earlier. This avoids hardcoding keys, which is great!</p>
+<p>We can now import this module in our config:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">imports</span> <span class="z-invalid z-illegal">=</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">      <span class="z-variable z-parameter z-name z-nix">impermanence</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">nixosModule</span>
+</span><span class="z-source z-nix">      <span class="z-string z-unquoted z-path z-nix">./hardware-configuration.Nix</span>
+</span><span class="z-source z-nix">      <span class="z-string z-unquoted z-path z-nix">../../modules/sops.nix</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p><code>sops-nix</code> is now ready to use. Do not forget to rebuild the config.</p>
+<h2 id="our-first-secret">Our first secret</h2>
+<p>Let’s write a secret:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>p</span> hosts/horus</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">nix-shell</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>p</span> sops<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>run</span> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>sops hosts/horus/secrets.yaml<span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span>
+</span></code></pre>
+<p>An editor should open. We can now write secrets, using yaml. Once we’re done, we can save the file. Example content:</p>
+<pre data-lang="yaml" class="language-yaml z-code"><code class="language-yaml" data-lang="yaml"><span class="z-source z-yaml"><span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">tailscale_key</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-unquoted z-plain z-out z-yaml">e2b6595884993e001da58d2995af65df489582a702e3a2f3</span>
+</span></code></pre>
+<p>We now have to tell <code>sops</code> this secret exists. So we declare it somewhere in our configuration:</p>
+<pre class="z-code"><code><span class="z-text z-plain">sops.secrets.tailscale_key = {
+</span><span class="z-text z-plain">  sopsFile = ./secrets.yaml;
+</span><span class="z-text z-plain">};
+</span></code></pre>
+<p>And that’s all! To use it, we simply have to use <code>config.sops.secrets.tailscale_key.path</code> where we need it. Beware that this will not give you the secret, but a path to a file containing the raw secret, for security reasons. Otherwise, the secret would be in the Nix store, and thus accessible to any user on the system.</p>
+<h2 id="note-adding-a-new-host">Note: adding a new host</h2>
+<p>If you ever need to add a new host, you will need to update your secrets with <code>sops updatekeys your_secret</code>. This command has to be on a system with already authorized keys.</p>
+<h1 id="tailscale">Tailscale</h1>
+<p>We can finally get to a real feature, setting up Tailscale.
+For those of you who haven’t heard of it, Tailscale is a private meshed network, allowing you to connect to your machines privately and securely through Wireguard, a VPN protocol, without exposing them to the world.
+This means being able to close port 22, while still being able to SSH into your computer.</p>
+<p>Furthermore, Tailscale offers some additional features, such as a fancy file sending tool or hole punching, which allows you to connect to your computer even if it is behind a NAT. I won’t go into details here, but you can read more about it on <a rel="noopener" target="_blank" href="https://tailscale.com/">their website</a>.</p>
+<p>I’ve chosen to write a full-fledged NixOS module for Tailscale, as it is a service that needs to be configured and started. This is a good example of a module that can be reused in other configurations, so it’s worth writing it. Let’s get started!</p>
+<h2 id="boilerplate-for-nixos-modules">Boilerplate for NixOS modules</h2>
+<p>We’re going to write a module, so we need to create a directory for it:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>p</span> modules/nixos</span>
+</span></code></pre>
+<p>Inside, we’ll need a <code>default.nix</code> file:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">tailscale-autoconnect</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-support z-function z-nix">import</span> <span class="z-string z-unquoted z-path z-nix">./tailscale-autoconnect.nix</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span></code></pre>
+<p>By convention, this file is automatically imported when you import a directory. Then, in our <code>flake.nix</code>, we can import our module:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-variable z-parameter z-name z-nix">outputs</span> <span class="z-invalid z-illegal">=</span> <span class="z-comment z-line z-number-sign z-nix"># ...</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">nixosModules</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-support z-function z-nix">import</span> <span class="z-string z-unquoted z-path z-nix">./modules/nixos</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span></code></pre>
+<p>As before, the <code>nixosModules</code> attribute has a special meaning.</p>
+<p>Finally, we have to import the module we’re writing in our configuration:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">imports</span> <span class="z-invalid z-illegal">=</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">      <span class="z-comment z-line z-number-sign z-nix"># ...</span>
+</span><span class="z-source z-nix">      <span class="z-variable z-parameter z-name z-nix">outputs</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">nixosModules</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscale-autoconnect</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<h2 id="writing-the-module">Writing the module</h2>
+<p>We’re going to write a module to start Tailscale and connect to it automatically. This is a good example of a module that can be reused in other configurations, so it’s worth writing it. Let’s get started!</p>
+<p>First, we need to create a <code>tailscale-autoconnect.nix</code> file in our <code>modules/nixos</code> directory. We’ll start with the boilerplate:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-punctuation z-definition z-entity z-function z-2 z-nix">{</span> <span class="z-variable z-parameter z-function z-1 z-nix">config</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-variable z-parameter z-function z-1 z-nix">lib</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-variable z-parameter z-function z-1 z-nix">pkgs</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-keyword z-operator z-nix">... </span><span class="z-punctuation z-definition z-entity z-function z-nix">}</span><span class="z-punctuation z-definition z-function z-nix">:</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">  <span class="z-invalid z-illegal z-reserved z-nix">with</span> <span class="z-variable z-parameter z-function z-maybe z-nix">lib</span><span class="z-invalid z-illegal">;</span> <span class="z-keyword z-other z-nix">let</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">cfg</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">config</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">services</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscaleAutoconnect</span><span class="z-punctuation z-terminator z-bind z-nix">;</span> 
+</span><span class="z-source z-nix">  <span class="z-keyword z-other z-nix">in</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">options</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">services</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">tailscaleAutoconnect</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">enable</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkEnableOption</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>tailscaleAutoconnect<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">config</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkIf</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">services</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscaleAutoconnect</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">enable</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-comment z-line z-number-sign z-nix"># ...</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span><span class="z-source z-nix"><span class="z-invalid z-illegal">}</span>
+</span></code></pre>
+<p>This is the basic structure of a module. We declare an option, and then we use it to conditionally change the configuration. So:</p>
+<ul>
+<li>What we write in <code>options</code> is the option declaration</li>
+<li>What we write in <code>config</code> is the consequence of the option being enabled, the configuration change</li>
+</ul>
+<p>Let’s declare all the options first.</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">options</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">services</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscaleAutoconnect</span> <span class="z-invalid z-illegal">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">enable</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkEnableOption</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>tailscaleAutoconnect<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">authkeyFile</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkOption</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">type</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">types</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">str</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">description</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>The authkey to use for authentication with Tailscale<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">loginServer</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkOption</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">type</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">types</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">str</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">default</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">description</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>The login server to use for authentication with Tailscale<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">advertiseExitNode</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkOption</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">type</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">types</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">bool</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">default</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">false</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">description</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>Whether to advertise this node as an exit node<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">exitNode</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkOption</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">type</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">types</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">str</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">default</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">description</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>The exit node to use for this node<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">exitNodeAllowLanAccess</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">mkOption</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">type</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">types</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">bool</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">default</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">false</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">description</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>Whether to allow LAN access to this node<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>This looks like a lot of code, but we’re simply declaring options. We need to give them a type, and we can also give a default value and a description.
+Now, the actually useful code:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">config</span> <span class="z-invalid z-illegal">=</span> <span class="z-variable z-parameter z-name z-nix">mkIf</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">enable</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">assertions</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">assertion</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">authkeyFile</span> <span class="z-keyword z-operator z-nix">!=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">message</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>authkeyFile must be set<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">assertion</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">exitNodeAllowLanAccess</span> <span class="z-keyword z-operator z-nix">-&gt;</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">exitNode</span> <span class="z-keyword z-operator z-nix">!=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">message</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>exitNodeAllowLanAccess must be false if exitNode is not set<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">assertion</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">advertiseExitNode</span> <span class="z-keyword z-operator z-nix">-&gt;</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">exitNode</span> <span class="z-keyword z-operator z-nix">==</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span><span class="z-entity z-other z-attribute-name z-multipart z-nix">d</span>
+</span><span class="z-source z-nix">        <span class="z-entity z-other z-attribute-name z-multipart z-nix">message</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>advertiseExitNode must be false if exitNode is set<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">systemd</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">services</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">tailscale-autoconnect</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">description</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>Automatic connection to Tailscale<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">      <span class="z-comment z-line z-number-sign z-nix"># make sure tailscale is running before trying to connect to tailscale</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">after</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span><span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>network-pre.target<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>tailscale.service<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">wants</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span><span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>network-pre.target<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>tailscale.service<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">wantedBy</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span><span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>multi-user.target<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">serviceConfig</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">Type</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>oneshot<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">script</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-keyword z-other z-nix">with</span> <span class="z-variable z-parameter z-name z-nix">pkgs</span>; <span class="z-string z-quoted z-other z-nix"><span class="z-punctuation z-definition z-string z-other z-start z-nix">&#39;&#39;</span>
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # wait for tailscaled to settle
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        sleep 2
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # check if we are already authenticated to tailscale
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        status=&quot;$(<span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">tailscale</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/bin/tailscale status -json | <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">jq</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/bin/jq -r .BackendState)&quot;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # if status is not null, then we are already authenticated
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        echo &quot;tailscale status: $status&quot;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        if [ &quot;$status&quot; != &quot;NeedsLogin&quot; ]; then
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">            exit 0
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        fi
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # otherwise authenticate with tailscale
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # timeout after 10 seconds to avoid hanging the boot process
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">coreutils</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/bin/timeout 10 <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">tailscale</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/bin/tailscale up \
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">          <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">optionalString</span> <span class="z-punctuation z-definition z-expression z-nix">(</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">loginServer</span> <span class="z-keyword z-operator z-nix">!=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-expression z-nix">)</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>--login-server=<span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">loginServer</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span> \
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">          --authkey=$(cat &quot;<span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">authkeyFile</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>&quot;)
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # we have to proceed in two steps because some options are only available
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        # after authentication
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">coreutils</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/bin/timeout 10 <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">tailscale</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/bin/tailscale up \
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">          <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">optionalString</span> <span class="z-punctuation z-definition z-expression z-nix">(</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">loginServer</span> <span class="z-keyword z-operator z-nix">!=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-expression z-nix">)</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>--login-server=<span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">loginServer</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span> \
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">          <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">optionalString</span> <span class="z-punctuation z-definition z-expression z-nix">(</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">advertiseExitNode</span><span class="z-punctuation z-definition z-expression z-nix">)</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>--advertise-exit-node<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span> \
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">          <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">optionalString</span> <span class="z-punctuation z-definition z-expression z-nix">(</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">exitNode</span> <span class="z-keyword z-operator z-nix">!=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-expression z-nix">)</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>--exit-node=<span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">exitNode</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span><span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span> \
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">          <span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">optionalString</span> <span class="z-punctuation z-definition z-expression z-nix">(</span><span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">exitNodeAllowLanAccess</span><span class="z-punctuation z-definition z-expression z-nix">)</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>--exit-node-allow-lan-access<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      <span class="z-punctuation z-definition z-string z-other z-end z-nix">&#39;&#39;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">networking</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">firewall</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">trustedInterfaces</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>tailscale0<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">allowedUDPPorts</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span> <span class="z-variable z-parameter z-name z-nix">config</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">services</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscale</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">port</span> <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">services</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">tailscale</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">enable</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">true</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">      <span class="z-entity z-other z-attribute-name z-multipart z-nix">useRoutingFeatures</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-keyword z-other z-nix">if</span> <span class="z-variable z-parameter z-name z-nix">cfg</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">advertiseExitNode</span> <span class="z-keyword z-other z-nix">th</span><span class="z-keyword z-other z-nix">en</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>server<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-keyword z-other z-nix">el</span><span class="z-keyword z-other z-nix">se</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>client<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>First, the assertions. They’re here to make sure that the user doesn’t make any mistake when configuring the module. For example, a user cannot both advertise an exit node and set an exit node.
+Then, the service. We’re using systemd to run a script that will connect to Tailscale. The <code>after</code>, <code>wants</code> and <code>wantedBy</code> options make the script run after the network is up and after Tailscale daemon is started. The <code>Type</code> option is here to make sure that the script is run only once. The script itself is a bit long, but it’s just a bunch of bash commands. It’s pretty straightforward. First, we wait for the Tailscale daemon to settle. Then, we check if we’re already authenticated. If we are, we exit. Otherwise, we authenticate. Finally, we connect to Tailscale. We have to do it in two steps because some options are only available after authentication.</p>
+<p>At the end, we configure the firewall to allow Tailscale traffic, and we enable the Tailscale service.</p>
+<p>Now, an example of how to use this module:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-punctuation z-definition z-entity z-function z-2 z-nix">{</span> <span class="z-variable z-parameter z-function z-1 z-nix">outputs</span><span class="z-keyword z-operator z-nix">,</span> <span class="z-keyword z-operator z-nix">...</span><span class="z-punctuation z-definition z-entity z-function z-nix">}</span><span class="z-punctuation z-definition z-function z-nix">:</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">imports</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">    <span class="z-variable z-parameter z-name z-nix">outputs</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">nixosModules</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscale-autoconnect</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">services</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">tailscaleAutoconnect</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">enable</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">true</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">authkeyFile</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">config</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">sops</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">secrets</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">tailscale_key</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">path</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">loginServer</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>https://login.tailscale.com<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">exitNode</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>some-node-id<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">exitNodeAllowLanAccess</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">true</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">sops</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">secrets</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">tailscale_key</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">sopsFile</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-unquoted z-path z-nix">./secrets.yaml</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">environment</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">persistence</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/persist<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">directories</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span><span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/var/lib/tailscale<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset z-nix">}</span>
+</span></code></pre>
+<p>The module is imported and configured. We also use the <code>sops</code> secret we created earlier. Finally, we persist the Tailscale state, so that we don’t have to authenticate again after a reboot. This is especially important if the authkey can expire.</p>
+<hr />
+<p>That’s all for this post. Thanks for reading! If you have any question, feel free to ask in the comments. The final code can be found <a rel="noopener" target="_blank" href="https://github.com/Guekka/nixos-server/tree/2-tailscale">here</a>.</p>
+<!--
+# Our first service : a simple file server
+
+Our first service will be a basic web server. For that, we will use nginx. `nginx` is, obviously, a web server. However, it is often also used as a reverse proxy, forwarding the requests it gets to the internal services. `nginx.Nix`:
+```nix
+{
+  services.nginx = {
+    enable = true;
+    recommendedTlsSettings = true;
+    recommendedProxySettings = true;
+    recommendedGzipSettings = true;
+    recommendedOptimisation = true;
+    clientMaxBodySize = "300m";
+  };
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
+}
+```
+`web-server.Nix`:
+```nix
+{
+    services.nginx.virtualHosts."e1.oze.li" = {
+      addSSL = true;
+      enableACME = true;
+      root = "/var/www/files";
+    };
+
+    environment.persistence = {
+      "/persist".directories = [ "/var/www/files" ];
+    };
+}
+```
+We are enabling the `nginx` service. For now, it only serves `e1.oze.li`, our web server. You can notice the `addSSL` parameter, together with `enableACME`: thanks to them, we are getting a HTTPS certificate for free, provided by LetsEncrypt. We need to accept its terms. `acme.Nix`:
+```nix
+  # Enable acme for usage with nginx vhosts
+  security.acme = {
+    defaults.email = "some@email.com";
+    acceptTerms = true;
+  };
+
+  environment.persistence = {
+    "/persist".directories = [ "/var/lib/acme" ];
+  };
+}
+```
+That's all! That is so simple and straightforward. I couldn't imagine myself using only Docker now.
+-->
+
+      <nav>
+        <div>
+        </div>
+        <div>
+          <a href="https://guekka.github.io/nixos-server-1/"> NixOS as a server, part 1: Impermanence &#8250;</a>
+        </div>
+      </nav>
+
+<noscript>Please enable JavaScript for accessing the comments</noscript>
+
+<script src="https://giscus.app/client.js" data-repo="guekka/guekka.github.io" data-repo-id="R_kgDOI_vZbw"
+    data-category="General" data-category-id="DIC_kwDOI_vZb84CUeNw" data-mapping="og:title" data-strict="0"
+    data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="preferred_color_scheme"
+    data-lang="en" data-loading="lazy" crossorigin="anonymous" async>
+    </script>
+
+<script>
+    function update() {
+        const islight = document.documentElement.classList.contains("light");
+        const theme = islight ? 'light' : 'dark_dimmed';
+
+        const message = { setConfig: { theme: theme } };
+        const iframe = document.querySelector('.giscus-frame');
+        iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+    }
+    document.getElementById('mode').addEventListener('click', () => setTimeout(update, 100)); // hack since callback order is undefined
+    window.addEventListener('load', update);
+</script>
+
+
+    </article>
+  </main>
+  <footer>
+    <hr />
+    <div class="c">
+      <nav><div><a href="https://gitlab.com/G_ka/" target="_blank" title="Gitlab"><i type="Button" class="svg gitlab" title="Gitlab"></i></a><a href="https://github.com/Guekka/" target="_blank" title="Github"><i type="Button" class="svg github" title="Github"></i></a><a href="https://www.ko-fi.com/Guekka/" target="_blank" title="Support me on Ko-fi"><i type="Button" class="svg kofi" title="Support me on Ko-fi"></i></a><a href="https://github.com/sponsors/Guekka/" target="_blank" title="GitHub Sponsor"><i type="Button" class="svg github-sponsor" title="GitHub Sponsor"></i></a></div></nav>
+      <p class="s90"> &copy; <span id="year">2024</span> Guekka's blog</p>
+      <nav>
+        <a class="s90" href="https://guekka.github.io/about/"> About </a>
+        <a class="s90" href="https://guekka.github.io/privacy/"> Privacy </a>
+        <a class="s90" href="https://guekka.github.io/sitemap.xml" target="_blank"> Sitemap </a>
+      </nav>
+      <p class="s90">Powered by <a href="https://www.getzola.org/" target="_blank">Zola</a> & <a href="https://github.com/jieiku/abridge/" target="_blank">Abridge</a></p>
+    </div>
+  </footer><span class="topout">
+<span class="topleft"> </span><a href="#" class="top" title="Back to Top"><i class="svgs svgh angu"></i></a>
+</span>
+</body>
+</html>
