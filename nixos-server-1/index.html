@@ -1,0 +1,455 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://guekka.github.io/js/theme.min.js" integrity="sha384-pb++s6uBRKaQv+iAXpgA/H3IlpLZdO14tTwuCI7uXmz4aaZdByoCcM+6BhynMq/1"></script>
+  <link rel="stylesheet" href="https://guekka.github.io/abridge.css?h=63bf1f533d098410e269" />
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="base" content="https://guekka.github.io" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#333333" />
+  <meta name="msapplication-TileColor" content="#333333" />
+  <link rel="manifest" href="https://guekka.github.io/manifest.min.json" />
+  <link rel="mask-icon" href="https://guekka.github.io/safari-pinned-tab.svg" color="#ff9900" />
+  <link rel="icon" type="image/svg+xml" href="https://guekka.github.io/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://guekka.github.io/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://guekka.github.io/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://guekka.github.io/favicon-16x16.png" />
+  <link rel="preload" as="style" class="preStyle" href="https://fonts.cdnfonts.com/css/ia-writer-quattro-s?styles=103875,103873" crossorigin="anonymous" />
+  <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <title>NixOS as a server, part 1: Impermanence | Guekka's blog</title>
+  <meta name="author" content="Guekka" />
+  <meta name="copyright" content="Guekka&#x27;s blog" />
+  <meta name="description" content="C++, Nix, Linux, Self-hosting, and more." />
+  <link rel="canonical" href="https://guekka.github.io/nixos-server-1/" />
+  <meta name="keywords" content="c++,self-hosting,nix,rust,linux,privacy" />
+  <meta property="og:url" content="https://guekka.github.io/nixos-server-1/" />
+  <meta name="twitter:url" content="https://guekka.github.io/nixos-server-1/" />
+  <meta property="og:description" content="C++, Nix, Linux, Self-hosting, and more." />
+  <meta name="twitter:description" content="C++, Nix, Linux, Self-hosting, and more." />
+  <meta property="og:title" content="NixOS as a server, part 1: Impermanence | Guekka&#x27;s blog" />
+  <meta name="twitter:title" content="NixOS as a server, part 1: Impermanence | Guekka&#x27;s blog" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:site_name" content="Guekka&#x27;s blog" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:type" content="website" />
+  <meta property="og:updated_time" content="2023-02-20" />
+<script defer data-domain="guekka.github.io" src="https://plausible.bizel.fr/js/script.js"></script>
+
+  <script defer src="https://guekka.github.io/js/abridge.min.js?h=4dbe2f6c7673e0a145f0" integrity="sha384-en9uTP2jQMLjO9fwbuGUKlCZ+kGMvN97ASddcA7mljWRGw70rs3zSMPNIozwGYFU"></script>
+  <noscript><link rel="stylesheet" href="https://guekka.github.io/nojs.css" /></noscript>
+</head>
+<body>
+  <header>
+    <nav>
+      <div><h1><a href="https://guekka.github.io" title="Guekka&#x27;s blog">Guekka's blog</a></h1></div>
+      <div>
+
+        <div>
+          <ul><li><a class="s110" href="https://guekka.github.io/about/"> About </a></li><li><a class="s110" href="https://guekka.github.io/archive/"> Posts </a></li><li><a class="s110" href="https://guekka.github.io/tags/"> Tags </a></li><li><i type="reset" id="mode" class="js svgs adjust"></i></ul>
+        </div>
+
+        <div>
+          <div>
+            <form autocomplete=off class="js" name="goSearch" id="searchbox">
+              <div class="searchd">
+                <input id="searchinput" type="text" placeholder="Search" title="Search" />
+                <button type="submit" title="Search" class="svgs search"></button>
+              </div>
+              <div class="results"><div id="suggestions"></div></div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </nav>
+  </header>
+  <main>
+    <article>
+      <h1><a href="https://guekka.github.io/nixos-server-1/">NixOS as a server, part 1: Impermanence</a></h1>
+
+      <span class="s95"> Guekka <span class="rpad"></span> February 20, 2023 <span class="rpad"></span> [<a href="https://guekka.github.io/categories/projects/">Projects</a>] #<a href="https://guekka.github.io/tags/nix/">nix</a>  #<a href="https://guekka.github.io/tags/self-hosting/">self-hosting</a> </span>
+
+    
+
+
+<p>A few months ago, I woke up with the idea of hosting my own services. I went through a lot of tries. LXC, Debian, Alpine, (rootless or not) Docker, podman, portainer…</p>
+<p>But no solution felt perfect. Until I decided to have a try at hosting using NixOS.</p>
+<p>I’m going to assume you know about NixOS and have some prior experience. However, for a small summary: NixOS is a Linux distribution revolving around the Nix package manager. Its main advantage is having a reproducible environment through a declarative configuration. This means that you can copy an entire computer configuration easily: if it works somewhere, it will work anywhere.</p>
+<p>My main focus point is reproducibility, so that’s why we’ll start with configuring <em>impermanence</em>.</p>
+<h2 id="what-s-impermanence">What’s impermanence?</h2>
+<p>Originally, a philosophic concept. But in our case, impermanence means erasing the <code>/</code> drive at each reboot. You read that right, erasing <em>almost</em> everything at each reboot. This part stands on the shoulders of those who did it before me:</p>
+<ul>
+<li><a rel="noopener" target="_blank" href="https://grahamc.com/blog/erase-your-darlings">Erase your darlings: immutable infrastructure for mutable systems - Graham Christensen</a></li>
+<li><a rel="noopener" target="_blank" href="https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/">NixOS ❄: tmpfs as root</a></li>
+<li><a rel="noopener" target="_blank" href="https://mt-caret.github.io/blog/2020-06-29-optin-state.html#fn6">Encypted Btrfs Root with Opt-in State on NixOS</a></li>
+<li><a rel="noopener" target="_blank" href="https://xeiaso.net/blog/paranoid-nixos-2021-07-18">Paranoid NixOS Setup - Xe Iaso</a></li>
+<li><a rel="noopener" target="_blank" href="https://github.com/nix-community/impermanence">nix-community/impermanence: NixOS module</a></li>
+</ul>
+<p>The goal is the following: over years, configuration files accumulate. Sometimes editing <code>/etc</code> is required, because of a bug or an obscure configuration. NixOS allows us to avoid this manual file editing, but it does not <em>force</em> us to do so. We can still have a lot of important state, breaking the reproducibility promise.</p>
+<p>So what can we do instead? Erase everything, at each reboot. This way, we’ll be sure the only source of truth is our configuration.</p>
+<h2 id="installing-the-system">Installing the system</h2>
+<p>I’m currently using a <a rel="noopener" target="_blank" href="https://github.com/quickemu-project/quickemu">quickemu</a> VM. This is not a recommenced setup and is only done for testing. Configuration file:</p>
+<pre data-lang="conf" class="language-conf z-code"><code class="language-conf" data-lang="conf"><span class="z-source z-genconfig"><span class="z-meta z-comment z-genconfig"><span class="z-comment z-line z-number-sign z-genconfig">#!/usr/bin/quickemu --vm
+</span></span></span><span class="z-source z-genconfig"><span class="z-meta z-param z-genconfig"><span class="z-variable z-parameter z-genconfig">guest_os</span><span class="z-keyword z-operator z-genconfig">=</span></span><span class="z-string z-quoted z-double z-genconfig">&quot;linux&quot;</span>
+</span><span class="z-source z-genconfig"><span class="z-meta z-param z-genconfig"><span class="z-variable z-parameter z-genconfig">disk_img</span><span class="z-keyword z-operator z-genconfig">=</span></span><span class="z-string z-quoted z-double z-genconfig">&quot;nixos-22.11-minimal/disk.qcow2&quot;</span>
+</span><span class="z-source z-genconfig"><span class="z-meta z-param z-genconfig"><span class="z-variable z-parameter z-genconfig">iso</span><span class="z-keyword z-operator z-genconfig">=</span></span><span class="z-string z-quoted z-double z-genconfig">&quot;nixos-22.11-minimal/latest-nixos-minimal-x86_64-linux.iso&quot;</span>
+</span><span class="z-source z-genconfig"><span class="z-meta z-param z-genconfig"><span class="z-variable z-parameter z-genconfig">disk_size</span><span class="z-keyword z-operator z-genconfig">=</span></span><span class="z-string z-quoted z-double z-genconfig">&quot;50G&quot;</span>
+</span><span class="z-source z-genconfig"><span class="z-meta z-param z-genconfig"><span class="z-variable z-parameter z-genconfig">ram</span><span class="z-keyword z-operator z-genconfig">=</span></span><span class="z-string z-quoted z-double z-genconfig">&quot;4G&quot;</span>
+</span></code></pre>
+<p>Let’s first format it:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">DISK</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell">/dev/vda</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">parted</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span><span class="z-keyword z-operator z-end-of-options z-shell"> --</span></span><span class="z-meta z-function-call z-arguments z-shell"> mklabel gpt</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">parted</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span><span class="z-keyword z-operator z-end-of-options z-shell"> --</span></span><span class="z-meta z-function-call z-arguments z-shell"> mkpart ESP fat32 1MiB 1GiB</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">parted</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span><span class="z-keyword z-operator z-end-of-options z-shell"> --</span></span><span class="z-meta z-function-call z-arguments z-shell"> set 1 boot on</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkfs.vfat</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>1</span>
+</span></code></pre>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">parted</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span><span class="z-keyword z-operator z-end-of-options z-shell"> --</span></span><span class="z-meta z-function-call z-arguments z-shell"> mkpart Swap linux-swap 1GiB 9GiB</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkswap</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>L</span> Swap <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>2</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">swapon</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>2</span>
+</span></code></pre>
+<blockquote>
+<p>Using swap in 2023!?</p>
+</blockquote>
+<p><a rel="noopener" target="_blank" href="https://chrisdown.name/2018/01/02/in-defence-of-swap.html">Yes</a>.</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">parted</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span><span class="z-keyword z-operator z-end-of-options z-shell"> --</span></span><span class="z-meta z-function-call z-arguments z-shell"> mkpart primary 9GiB 100<span class="z-meta z-group z-expansion z-job z-shell"><span class="z-punctuation z-definition z-variable z-job z-shell">%</span></span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkfs.btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>L</span> Butter <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3</span>
+</span></code></pre>
+<p>While the <code>impermanence</code> module recommends using <code>tmpfs</code> for <code>/</code>, I chose to use <code>btrfs</code>: I do not have RAM to waste. Furthermore, this will allow us to use a nice script we’ll see later on.</p>
+<p>Let’s create <code>btrfs</code> subvolumes:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3 /mnt</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"> subvolume create /mnt/root</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"> subvolume create /mnt/home</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"> subvolume create /mnt/nix</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"> subvolume create /mnt/persist</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"> subvolume create /mnt/log</span>
+</span></code></pre>
+<p>And now, the crucial part:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">btrfs</span></span><span class="z-meta z-function-call z-arguments z-shell"> subvolume snapshot<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>r</span> /mnt/root /mnt/root-blank</span>
+</span></code></pre>
+<p>We just took a snapshot of that empty volume. We will restore it at each reboot.
+We can now mount the subvolumes and let <code>nixos-generate-config</code> do its job</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> subvol=root,compress=zstd,noatime <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3 /mnt</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"> /mnt/home</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> subvol=home,compress=zstd,noatime <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3 /mnt/home</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"> /mnt/nix</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> subvol=nix,compress=zstd,noatime <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3 /mnt/nix</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"> /mnt/persist</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> subvol=persist,compress=zstd,noatime <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3 /mnt/persist</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>p</span> /mnt/var/log</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> subvol=log,compress=zstd,noatime <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>3 /mnt/var/log</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"> /mnt/boot</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mount</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">DISK</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span>1 /mnt/boot</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">nixos-generate-config</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>root</span> /mnt</span>
+</span></code></pre>
+<p>Lastly, we only have to edit the generated configuration files at <code>/mnt/etc/nixos</code>.</p>
+<p>My final configuration is available <a rel="noopener" target="_blank" href="https://github.com/Guekka/nixos-server/tree/1-impermanence">here</a>. You can follow all the steps by looking at the <a rel="noopener" target="_blank" href="https://github.com/Guekka/nixos-server/commits/1-impermanence">commits</a>.</p>
+<h2 id="configuring-the-system">Configuring the system</h2>
+<ul>
+<li>Checking that we have the correct mount options in <code>/mnt/etc/nixos/hardware-configuration.nix</code>.</li>
+</ul>
+<p>I’ve added <code>&quot;compress=zstd&quot; &quot;noatime&quot;</code> to all filesystems. We also need to add <code>neededForBoot</code> to <code>/var/log</code> and <code>/persist</code>.</p>
+<ul>
+<li>Replacing default values in <code>configuration.nix</code></li>
+</ul>
+<p>I’ve enabled <code>networkmanager</code>, removed most suggested options and enabled <code>system.copySystemConfiguration</code>.</p>
+<p>This last option copies the current configuration to <code>/run/current_system/configuration.nix</code>. You should not rely on it: keep your configuration in a git repository. But it can serve as some kind of last chance.</p>
+<ul>
+<li>Declaring a user, including ssh</li>
+</ul>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-variable z-parameter z-name z-nix">users</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">mutableUsers</span> <span class="z-invalid z-illegal">=</span> <span class="z-constant z-language z-nix">false</span><span class="z-invalid z-illegal">;</span>
+</span><span class="z-source z-nix"><span class="z-variable z-parameter z-name z-nix">users</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">users</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">user</span> <span class="z-invalid z-illegal">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix"> <span class="z-entity z-other z-attribute-name z-multipart z-nix">isNormalUser</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">true</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"> <span class="z-entity z-other z-attribute-name z-multipart z-nix">extraGroups</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>wheel<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix"> <span class="z-entity z-other z-attribute-name z-multipart z-nix">openssh</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">authorizedKeys</span>.<span class="z-entity z-other z-attribute-name z-multipart z-nix">keys</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICWVNch9BcjkMqS/Xwep+GN4HwqyRIjr3Cuw7mHpqsKr nixos<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix"> <span class="z-comment z-line z-number-sign z-nix"># passwordFile needs to be in a volume marked with `neededForBoot = true`</span>
+</span><span class="z-source z-nix"> <span class="z-entity z-other z-attribute-name z-multipart z-nix">passwordFile</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/persist/passwords/user<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>Here we have completely disabled imperative user modification. This does not matter much, as imperative changes would be erased anyway at start.
+We thus need to provide a password. We’re using <code>passwordFile</code> for that: a path to a file containing the hashed password.</p>
+<p>Here’s how to generate that file: <code>sudo mkpasswd -m sha-512 &quot;hunter2&quot; &gt; /mnt/persist/passwords/user</code>.</p>
+<p>The SSH key was generated using `ssh-keygen -t ed25519 -C “nixos”.</p>
+<ul>
+<li>Enabling openSSH
+We’re going to use Xe’s configuration:</li>
+</ul>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">services</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">openssh</span> <span class="z-invalid z-illegal">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">   <span class="z-entity z-other z-attribute-name z-multipart z-nix">enable</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">true</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">   <span class="z-entity z-other z-attribute-name z-multipart z-nix">passwordAuthentication</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">false</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">   <span class="z-entity z-other z-attribute-name z-multipart z-nix">allowSFTP</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">false</span><span class="z-punctuation z-terminator z-bind z-nix">;</span> <span class="z-comment z-line z-number-sign z-nix"># Don&#39;t set this if you need sftp</span>
+</span><span class="z-source z-nix">   <span class="z-entity z-other z-attribute-name z-multipart z-nix">challengeResponseAuthentication</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">false</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">   <span class="z-entity z-other z-attribute-name z-multipart z-nix">extraConfig</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-string z-quoted z-other z-nix"><span class="z-punctuation z-definition z-string z-other z-start z-nix">&#39;&#39;</span>
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">     AllowTcpForwarding yes
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">     X11Forwarding no
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">     AllowAgentForwarding no
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">     AllowStreamLocalForwarding no
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">     AuthenticationMethods publickey
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">   <span class="z-punctuation z-definition z-string z-other z-end z-nix">&#39;&#39;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">  <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>This reduces attack surface, for example by disabling stream-local forwarding and disabling password authentification.</p>
+<hr />
+<p>This will be enough for now. Let’s install the system before going to the next step: <code>sudo nixos-install --root /mnt &amp;&amp; sudo reboot</code>. You should be able to connect by SSH using the previously defined key, or login using the password you defined in <code>/persist/passwords/user</code>.</p>
+<h2 id="configuring-impermanence">Configuring impermanence</h2>
+<p>We’ve created our volumes, we’ve configured the system… But I promised we would reset our system at each reboot. Let’s do that now!
+We’re going to use the following script, credit of mt-caret. Do not forget to replace <code>vda3</code> with your data partition.</p>
+<p><strong>16/07/23 update</strong>: it was brought to my attention that <a rel="noopener" target="_blank" href="https://discourse.nixos.org/t/what-does-impermanence-add-over-built-in-functionality/27939/16">postDeviceCommands can cause data loss</a>.
+While I did not experience any issue, I have updated the script to use a safer alternative. </p>
+<p><strong>29/07/24 update</strong>: according to Nire Bryce, the updated script did not work. I’m surprised as it seemed to work locally, but I made the change anyway. I appreciate <a rel="noopener" target="_blank" href="https://github.com/Guekka/guekka.github.io/issues/5">their help</a>.</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">boot</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">initrd</span> <span class="z-invalid z-illegal">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">enable</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">true</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">supportedFilesystems</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>btrfs<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">postResumeCommands</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-variable z-parameter z-name z-nix">lib</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">mkAfter</span> <span class="z-string z-quoted z-other z-nix"><span class="z-punctuation z-definition z-string z-other z-start z-nix">&#39;&#39;</span>
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      mkdir -p /mnt
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # We first mount the btrfs root to /mnt
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # so we can manipulate btrfs subvolumes.
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      mount -o subvol=/ /dev/vda3 /mnt
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">  
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # While we&#39;re tempted to just delete /root and create
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # a new snapshot from /root-blank, /root is already
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # populated at this point with a number of subvolumes,
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # which makes `btrfs subvolume delete` fail.
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # So, we remove them first.
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      #
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # /root contains subvolumes:
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # - /root/var/lib/portables
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # - /root/var/lib/machines
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      #
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # I suspect these are related to systemd-nspawn, but
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # since I don&#39;t use it I&#39;m not 100% sure.
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # Anyhow, deleting these subvolumes hasn&#39;t resulted
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # in any issues so far, except for fairly
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # benign-looking errors from systemd-tmpfiles.
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      btrfs subvolume list -o /mnt/root |
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      cut -f9 -d&#39; &#39; |
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      while read subvolume; do
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        echo &quot;deleting /$subvolume subvolume...&quot;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">        btrfs subvolume delete &quot;/mnt/$subvolume&quot;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      done &amp;&amp;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      echo &quot;deleting /root subvolume...&quot; &amp;&amp;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      btrfs subvolume delete /mnt/root
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      echo &quot;restoring blank /root subvolume...&quot;
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      btrfs subvolume snapshot /mnt/root-blank /mnt/root
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">  
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # Once we&#39;re done rolling back to a blank snapshot,
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      # we can unmount /mnt and continue on the boot process.
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">      umount /mnt
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">    <span class="z-punctuation z-definition z-string z-other z-end z-nix">&#39;&#39;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"> <span class="z-punctuation z-definition z-attrset z-nix">}</span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>We can then specify the files we want to keep.</p>
+<p>But which files do we want to keep? Let’s find out. Thanks to another useful script of mt-caret, we can list the differences between our current <code>/</code> and the blank state:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell">!/usr/bin/env bash</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> fs-diff.sh</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-support z-function z-set z-shell">set</span></span><span class="z-meta z-function-call z-arguments z-shell"> -euo pipefail</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">OLD_TRANSID</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell"><span class="z-meta z-group z-expansion z-command z-parens z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-parens z-begin z-shell">(</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> btrfs subvolume find-new /mnt/root-blank 9999999</span><span class="z-punctuation z-section z-parens z-end z-shell">)</span></span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">OLD_TRANSID</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell"><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">OLD_TRANSID<span class="z-keyword z-operator z-expansion z-shell">#</span></span></span><span class="z-meta z-group z-expansion z-parameter z-shell">transid marker was </span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> btrfs subvolume find-new <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>/mnt/root<span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">OLD_TRANSID</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span> <span class="z-keyword z-operator z-logical z-pipe z-shell">|</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sed</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>$d<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span> <span class="z-keyword z-operator z-logical z-pipe z-shell">|</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">cut</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>f17-</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>d</span><span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span> <span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span> <span class="z-keyword z-operator z-logical z-pipe z-shell">|</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sort</span></span> <span class="z-keyword z-operator z-logical z-pipe z-shell">|</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">uniq</span></span> <span class="z-keyword z-operator z-logical z-pipe z-shell">|</span>
+</span><span class="z-source z-shell z-bash"><span class="z-keyword z-control z-loop z-while z-shell">while</span> <span class="z-meta z-function-call z-shell"><span class="z-support z-function z-read z-shell">read</span></span><span class="z-meta z-function-call z-arguments z-shell"> path</span><span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-keyword z-control z-loop z-do z-shell">do</span>
+</span><span class="z-source z-shell z-bash">  <span class="z-variable z-other z-readwrite z-assignment z-shell">path</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell"><span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>/<span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">path</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-keyword z-control z-conditional z-if z-shell">if</span> <span class="z-support z-function z-test z-begin z-shell">[</span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell">-</span>L</span> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">path</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span> <span class="z-support z-function z-test z-end z-shell">]</span></span><span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-keyword z-control z-conditional z-then z-shell">then</span>
+</span><span class="z-source z-shell z-bash">    <span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span> <span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> The path is a symbolic link, so is probably handled by NixOS already</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash">  <span class="z-keyword z-control z-conditional z-elseif z-shell">elif</span> <span class="z-support z-function z-test z-begin z-shell">[</span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell">-</span>d</span> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">path</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span> <span class="z-support z-function z-test z-end z-shell">]</span></span><span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-keyword z-control z-conditional z-then z-shell">then</span>
+</span><span class="z-source z-shell z-bash">    <span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span> <span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> The path is a directory, ignore</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash">  <span class="z-keyword z-control z-conditional z-else z-shell">else</span>
+</span><span class="z-source z-shell z-bash">    <span class="z-meta z-function-call z-shell"><span class="z-support z-function z-echo z-shell">echo</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">path</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-keyword z-control z-conditional z-end z-shell">fi</span>
+</span><span class="z-source z-shell z-bash"><span class="z-keyword z-control z-loop z-end z-shell">done</span>
+</span></code></pre>
+<p>Used like this:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> mkdir /mnt</span> <span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> mount<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> subvol=/ /dev/vda3 /mnt</span> <span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">./fs-diff.sh</span></span>
+</span></code></pre>
+<p>Here’s the result of mine:</p>
+<pre class="z-code"><code><span class="z-text z-plain">/etc/.clean
+</span><span class="z-text z-plain">/etc/group
+</span><span class="z-text z-plain">/etc/machine-id
+</span><span class="z-text z-plain">/etc/nixos/configuration.nix
+</span><span class="z-text z-plain">/etc/nixos/hardware-configuration.nix
+</span><span class="z-text z-plain">/etc/passwd
+</span><span class="z-text z-plain">/etc/resolv.conf
+</span><span class="z-text z-plain">/etc/shadow
+</span><span class="z-text z-plain">/etc/ssh/authorized_keys.d/user
+</span><span class="z-text z-plain">/etc/ssh/ssh_host_ed25519_key
+</span><span class="z-text z-plain">/etc/ssh/ssh_host_ed25519_key.pub
+</span><span class="z-text z-plain">/etc/ssh/ssh_host_rsa_key
+</span><span class="z-text z-plain">/etc/ssh/ssh_host_rsa_key.pub
+</span><span class="z-text z-plain">/etc/subgid
+</span><span class="z-text z-plain">/etc/subuid
+</span><span class="z-text z-plain">/etc/sudoers
+</span><span class="z-text z-plain">/etc/.updated
+</span><span class="z-text z-plain">/root/.nix-channels
+</span><span class="z-text z-plain">/root/.nix-defexpr/channels
+</span><span class="z-text z-plain">/var/lib/NetworkManager/internal-84e273c2-b91a-3a96-b341-8234a339bdc7-enp0s8.lease
+</span><span class="z-text z-plain">/var/lib/NetworkManager/internal-84e273c2-b91a-3a96-b341-8234a339bdc7-enp0s9.lease
+</span><span class="z-text z-plain">/var/lib/NetworkManager/NetworkManager-intern.conf
+</span><span class="z-text z-plain">/var/lib/NetworkManager/secret_key
+</span><span class="z-text z-plain">/var/lib/NetworkManager/timestamps
+</span><span class="z-text z-plain">/var/lib/nixos/auto-subuid-map
+</span><span class="z-text z-plain">/var/lib/nixos/declarative-groups
+</span><span class="z-text z-plain">/var/lib/nixos/declarative-users
+</span><span class="z-text z-plain">/var/lib/nixos/gid-map
+</span><span class="z-text z-plain">/var/lib/nixos/uid-map
+</span><span class="z-text z-plain">/var/lib/systemd/catalog/database
+</span><span class="z-text z-plain">/var/lib/systemd/random-seed
+</span><span class="z-text z-plain">/var/.updated
+</span></code></pre>
+<p>That’s not too bad!</p>
+<p>Out of these, there’s almost nothing I want to preserve.</p>
+<p>Let’s make use of the <code>impermanence</code> module. We need to download it:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix"><span class="z-keyword z-other z-nix">let</span>
+</span><span class="z-source z-nix">  <span class="z-entity z-other z-attribute-name z-multipart z-nix">impermanence</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-constant z-language z-nix">builtins</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">fetchTarball</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>https://github.com/nix-community/impermanence/archive/master.tar.gz<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix"><span class="z-keyword z-other z-nix">in</span>
+</span><span class="z-source z-nix"><span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix"><span class="z-entity z-other z-attribute-name z-multipart z-nix">imports</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span> <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span><span class="z-markup z-italic"><span class="z-punctuation z-section z-embedded z-begin z-nix">${</span><span class="z-variable z-parameter z-name z-nix">impermanence</span><span class="z-punctuation z-section z-embedded z-end z-nix">}</span></span>/nixos.nix<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-string z-unquoted z-path z-nix">./hardware-configuration.nix</span> <span class="z-punctuation z-definition z-list z-nix">]</span>
+</span><span class="z-source z-nix"><span class="z-keyword z-operator z-nix">//</span> <span class="z-variable z-parameter z-name z-nix">the</span> <span class="z-variable z-parameter z-name z-nix">whole</span> <span class="z-variable z-parameter z-name z-nix">configuration</span>
+</span><span class="z-source z-nix"><span class="z-invalid z-illegal">}</span>
+</span></code></pre>
+<p>And now, we can just tell it the files and directories that we want:</p>
+<pre data-lang="nix" class="language-nix z-code"><code class="language-nix" data-lang="nix"><span class="z-source z-nix">  <span class="z-comment z-line z-number-sign z-nix"># configure impermanence</span>
+</span><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">environment</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">persistence</span><span class="z-keyword z-operator z-nix">.</span><span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/persist<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span> <span class="z-invalid z-illegal">=</span> <span class="z-punctuation z-definition z-attrset-or-function z-nix">{</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">directories</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">      <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/etc/nixos<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>
+</span><span class="z-source z-nix">    <span class="z-punctuation z-definition z-list z-nix">]</span><span class="z-punctuation z-terminator z-bind z-nix">;</span>
+</span><span class="z-source z-nix">    <span class="z-entity z-other z-attribute-name z-multipart z-nix">files</span> <span class="z-keyword z-operator z-bind z-nix">=</span> <span class="z-punctuation z-definition z-list z-nix">[</span>
+</span><span class="z-source z-nix">      <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/etc/machine-id<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>
+</span><span class="z-source z-nix">      <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/etc/ssh/ssh_host_ed25519_key<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>
+</span><span class="z-source z-nix">      <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/etc/ssh/ssh_host_ed25519_key.pub<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>
+</span><span class="z-source z-nix">      <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/etc/ssh/ssh_host_rsa_key<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>
+</span><span class="z-source z-nix">      <span class="z-string z-quoted z-double z-nix"><span class="z-punctuation z-definition z-string z-double z-start z-nix">&quot;</span>/etc/ssh/ssh_host_rsa_key.pub<span class="z-punctuation z-definition z-string z-double z-end z-nix">&quot;</span></span>
+</span><span class="z-source z-nix">  <span class="z-invalid z-illegal">}</span><span class="z-invalid z-illegal">;</span>
+</span><span class="z-source z-nix">
+</span><span class="z-source z-nix">  <span class="z-variable z-parameter z-name z-nix">security</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">sudo</span><span class="z-keyword z-operator z-nix">.</span><span class="z-variable z-parameter z-name z-nix">extraConfig</span> <span class="z-invalid z-illegal">=</span> <span class="z-string z-quoted z-other z-nix"><span class="z-punctuation z-definition z-string z-other z-start z-nix">&#39;&#39;</span>
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">    # rollback results in sudo lectures after each reboot
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">    Defaults lecture = never
+</span></span><span class="z-source z-nix"><span class="z-string z-quoted z-other z-nix">  <span class="z-punctuation z-definition z-string z-other z-end z-nix">&#39;&#39;</span></span><span class="z-invalid z-illegal">;</span>
+</span></code></pre>
+<p>What an ergonomic interface.</p>
+<blockquote>
+<p>Wait, did you just say Nix was ergonomic?</p>
+</blockquote>
+<p>Well, yes. Sometimes.</p>
+<hr />
+<p>I have not saved my network manager configuration, but you may need to.</p>
+<p>When new files are set to be preserved, <strong>it is necessary to copy them manually to <code>/persist</code></strong>:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> nixos-rebuild boot</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> mkdir /persist/etc</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> cp<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>r</span> <span class="z-meta z-group z-expansion z-brace z-shell"><span class="z-punctuation z-section z-expansion z-brace z-begin z-shell">{</span><span class="z-punctuation z-separator z-shell">,</span>/persist<span class="z-punctuation z-section z-expansion z-brace z-end z-shell">}</span></span>/etc/nixos</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> cp <span class="z-meta z-group z-expansion z-brace z-shell"><span class="z-punctuation z-section z-expansion z-brace z-begin z-shell">{</span><span class="z-punctuation z-separator z-shell">,</span>/persist<span class="z-punctuation z-section z-expansion z-brace z-end z-shell">}</span></span>/etc/machine-id</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> mkdir /persist/etc/ssh</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> cp <span class="z-meta z-group z-expansion z-brace z-shell"><span class="z-punctuation z-section z-expansion z-brace z-begin z-shell">{</span><span class="z-punctuation z-separator z-shell">,</span>/persist<span class="z-punctuation z-section z-expansion z-brace z-end z-shell">}</span></span>/etc/ssh/ssh_host_ed25519_key</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> cp <span class="z-meta z-group z-expansion z-brace z-shell"><span class="z-punctuation z-section z-expansion z-brace z-begin z-shell">{</span><span class="z-punctuation z-separator z-shell">,</span>/persist<span class="z-punctuation z-section z-expansion z-brace z-end z-shell">}</span></span>/etc/ssh/ssh_host_ed25519_key.pub</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> cp <span class="z-meta z-group z-expansion z-brace z-shell"><span class="z-punctuation z-section z-expansion z-brace z-begin z-shell">{</span><span class="z-punctuation z-separator z-shell">,</span>/persist<span class="z-punctuation z-section z-expansion z-brace z-end z-shell">}</span></span>/etc/ssh/ssh_host_rsa_key</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">sudo</span></span><span class="z-meta z-function-call z-arguments z-shell"> cp <span class="z-meta z-group z-expansion z-brace z-shell"><span class="z-punctuation z-section z-expansion z-brace z-begin z-shell">{</span><span class="z-punctuation z-separator z-shell">,</span>/persist<span class="z-punctuation z-section z-expansion z-brace z-end z-shell">}</span></span>/etc/ssh/ssh_host_rsa_key.pub</span>
+</span></code></pre>
+<p>Now, if we reboot and list files again:</p>
+<pre class="z-code"><code><span class="z-text z-plain">/etc/.clean
+</span><span class="z-text z-plain">/etc/group
+</span><span class="z-text z-plain">/etc/passwd
+</span><span class="z-text z-plain">/etc/resolv.conf
+</span><span class="z-text z-plain">/etc/shadow
+</span><span class="z-text z-plain">/etc/ssh/authorized_keys.d/user
+</span><span class="z-text z-plain">/etc/subgid
+</span><span class="z-text z-plain">/etc/subuid
+</span><span class="z-text z-plain">/etc/sudoers
+</span><span class="z-text z-plain">/etc/.updated
+</span><span class="z-text z-plain">/root/.nix-channels
+</span><span class="z-text z-plain">/var/lib/NetworkManager/internal-84e273c2-b91a-3a96-b341-8234a339bdc7-enp0s9.lease
+</span><span class="z-text z-plain">/var/lib/NetworkManager/NetworkManager-intern.conf
+</span><span class="z-text z-plain">/var/lib/NetworkManager/secret_key
+</span><span class="z-text z-plain">/var/lib/NetworkManager/timestamps
+</span><span class="z-text z-plain">/var/lib/nixos/auto-subuid-map
+</span><span class="z-text z-plain">/var/lib/nixos/declarative-groups
+</span><span class="z-text z-plain">/var/lib/nixos/declarative-users
+</span><span class="z-text z-plain">/var/lib/nixos/gid-map
+</span><span class="z-text z-plain">/var/lib/nixos/uid-map
+</span><span class="z-text z-plain">/var/lib/systemd/catalog/database
+</span><span class="z-text z-plain">/var/lib/systemd/random-seed
+</span><span class="z-text z-plain">/var/.updated
+</span></code></pre>
+<p>Success! The files we persisted are no longer showing up.</p>
+<h3 id="what-about-our-home-directory">What about our home directory?</h3>
+<p>It is possible to setup the impermanence module for our home directory. However, I did not want to go through <code>home-manager</code> installation. Furthermore, a home directory is meant to be stateful.</p>
+<p>In our case, we are creating a server, so it would still make sense to configure it. If you are interested, have a look at <a rel="noopener" target="_blank" href="https://elis.nu/blog/2020/06/nixos-tmpfs-as-home/">tmpfs at home</a>.</p>
+<h2 id="next-steps">Next steps</h2>
+<p>In the next part, we will make our server more secure by making it only available through Tailscale. We will also setup our first service.</p>
+<hr />
+<p>I hope you’ve enjoyed this article! Thanks for reading to the end!</p>
+
+      <nav>
+        <div>
+          <a href="https://guekka.github.io/nixos-server-2/">&#8249; NixOS as a server, part 2: Flake, tailscale</a>
+        </div>
+        <div>
+        </div>
+      </nav>
+
+<noscript>Please enable JavaScript for accessing the comments</noscript>
+
+<script src="https://giscus.app/client.js" data-repo="guekka/guekka.github.io" data-repo-id="R_kgDOI_vZbw"
+    data-category="General" data-category-id="DIC_kwDOI_vZb84CUeNw" data-mapping="og:title" data-strict="0"
+    data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="preferred_color_scheme"
+    data-lang="en" data-loading="lazy" crossorigin="anonymous" async>
+    </script>
+
+<script>
+    function update() {
+        const islight = document.documentElement.classList.contains("light");
+        const theme = islight ? 'light' : 'dark_dimmed';
+
+        const message = { setConfig: { theme: theme } };
+        const iframe = document.querySelector('.giscus-frame');
+        iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+    }
+    document.getElementById('mode').addEventListener('click', () => setTimeout(update, 100)); // hack since callback order is undefined
+    window.addEventListener('load', update);
+</script>
+
+
+    </article>
+  </main>
+  <footer>
+    <hr />
+    <div class="c">
+      <nav><div><a href="https://gitlab.com/G_ka/" target="_blank" title="Gitlab"><i type="Button" class="svg gitlab" title="Gitlab"></i></a><a href="https://github.com/Guekka/" target="_blank" title="Github"><i type="Button" class="svg github" title="Github"></i></a><a href="https://www.ko-fi.com/Guekka/" target="_blank" title="Support me on Ko-fi"><i type="Button" class="svg kofi" title="Support me on Ko-fi"></i></a><a href="https://github.com/sponsors/Guekka/" target="_blank" title="GitHub Sponsor"><i type="Button" class="svg github-sponsor" title="GitHub Sponsor"></i></a></div></nav>
+      <p class="s90"> &copy; <span id="year">2024</span> Guekka's blog</p>
+      <nav>
+        <a class="s90" href="https://guekka.github.io/about/"> About </a>
+        <a class="s90" href="https://guekka.github.io/privacy/"> Privacy </a>
+        <a class="s90" href="https://guekka.github.io/sitemap.xml" target="_blank"> Sitemap </a>
+      </nav>
+      <p class="s90">Powered by <a href="https://www.getzola.org/" target="_blank">Zola</a> & <a href="https://github.com/jieiku/abridge/" target="_blank">Abridge</a></p>
+    </div>
+  </footer><span class="topout">
+<span class="topleft"> </span><a href="#" class="top" title="Back to Top"><i class="svgs svgh angu"></i></a>
+</span>
+</body>
+</html>
