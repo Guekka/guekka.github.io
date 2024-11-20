@@ -21,7 +21,7 @@ My main focus point is reproducibility, so that's why we'll start with configuri
 Originally, a philosophic concept. But in our case, impermanence means erasing the `/` drive at each reboot. You read that right, erasing *almost* everything at each reboot. This part stands on the shoulders of those who did it before me:
 - [Erase your darlings: immutable infrastructure for mutable systems - Graham Christensen](https://grahamc.com/blog/erase-your-darlings)
 - [NixOS ❄: tmpfs as root](https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/)
-- [Encypted Btrfs Root with Opt-in State on NixOS](https://mt-caret.github.io/blog/posts/2020-06-29-optin-state.html#fn6)
+- [Encypted Btrfs Root with Opt-in State on NixOS](https://mt-caret.github.io/blog/2020-06-29-optin-state.html#fn6)
 - [Paranoid NixOS Setup - Xe Iaso](https://xeiaso.net/blog/paranoid-nixos-2021-07-18)
 - [nix-community/impermanence: NixOS module](https://github.com/nix-community/impermanence)
 
